@@ -1,0 +1,3 @@
+module Network.XMPP
+    () where
+

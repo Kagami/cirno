@@ -1,0 +1,19 @@
+Name:          cirno
+Version:       0.0.1
+License:       BSD3
+Author:        Magnus Henoch,
+               Kagami Hiiragi <kagami@genshiken.org>
+Maintainer:    Kagami Hiiragi <kagami@genshiken.org>
+Homepage:      https://github.com/Kagami/cirno
+Category:      Network
+Stability:     Experimental
+Description:   Haskell XMPP library, the successor of the XMPP lib
+
+Build-type:    Simple
+Cabal-version: >= 1.2
+
+Library
+    Exposed-modules: Network.XMPP
+
+    Hs-source-dirs:  src
+    Build-depends:   base == 4.*
