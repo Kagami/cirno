@@ -7,7 +7,9 @@ Maintainer:    Kagami Hiiragi <kagami@genshiken.org>
 Homepage:      https://github.com/Kagami/cirno
 Category:      Network
 Stability:     Experimental
-Description:   Haskell XMPP library, the successor of the XMPP lib
+Synopsis:      Haskell XMPP library, the successor of the XMPP lib
+Description:   Haskell XMPP library, the successor of the XMPP lib.
+               Package contains simple echo bot example "cirno".
 
 Build-type:    Simple
 Cabal-version: >= 1.2
@@ -17,3 +19,9 @@ Library
 
     Hs-source-dirs:  src
     Build-depends:   base == 4.*
+
+Executable cirno
+    Main-is:        Cirno.hs
+    Hs-source-dirs: src, examples
+    Build-depends:    base == 4.*
+                    , text == 0.11.*
