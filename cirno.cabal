@@ -1,6 +1,7 @@
 Name:          cirno
 Version:       0.0.1
 License:       BSD3
+License-file:  COPYING
 Author:        Magnus Henoch,
                Kagami Hiiragi <kagami@genshiken.org>
 Maintainer:    Kagami Hiiragi <kagami@genshiken.org>
@@ -12,38 +13,50 @@ Description:   Haskell XMPP library, the successor of the XMPP lib.
                Package contains simple echo bot example "cirno".
 
 Build-type:    Simple
-Cabal-version: >= 1.2
+Cabal-version: >= 1.10
+
+Source-repository head
+    Type:     git
+    Location: https://github.com/Kagami/cirno.git
 
 Library
-    Exposed-modules: Network.XMPP
-    Other-modules:   Network.XMPP.JID
-                     Network.XMPP.Utils
+    Exposed-modules:    Network.XMPP
+    Other-modules:      Network.XMPP.JID
+                        Network.XMPP.Utils
 
-    GHC-options:     -Wall
-    Hs-source-dirs:  src
-    Extensions:      OverloadedStrings
-                     RecordWildCards
+    GHC-options:        -Wall
+    Hs-source-dirs:     src
+    Default-language:   Haskell98
+    Default-extensions: OverloadedStrings
+                        RecordWildCards
 
-    Build-depends:   base == 4.*
-                   , text == 0.11.*
+    Build-depends:      base == 4.*
+                      , text == 0.11.*
 
 Executable cirno
-    Main-is:        Cirno.hs
+    Main-is:            Cirno.hs
 
-    GHC-options:    -Wall
-    Hs-source-dirs: src, examples
-    Extensions:     OverloadedStrings
-                    RecordWildCards
+    GHC-options:        -Wall
+    Hs-source-dirs:     src, examples
+    Default-language:   Haskell98
+    Default-extensions: OverloadedStrings
+                        RecordWildCards
+
+    Build-depends:      base == 4.*
+                      , text == 0.11.*
 
 Test-suite cirno-tests
-    Main-is:        Tests.hs
+    Main-is:            Tests.hs
 
-    GHC-options:    -Wall
-    Hs-source-dirs: src, tests
-    Extensions:     OverloadedStrings
-                    RecordWildCards
-    Type:           exitcode-stdio-1.0
+    GHC-options:        -Wall
+    Hs-source-dirs:     src, tests
+    Default-language:   Haskell98
+    Default-extensions: OverloadedStrings
+                        RecordWildCards
+    Type:               exitcode-stdio-1.0
 
-    Build-depends:  test-framework             == 0.6.*
-                  , test-framework-hunit       == 0.2.*
-                  , HUnit                      == 1.2.*
+    Build-depends:      base                 == 4.*
+                      , text                 == 0.11.*
+                      , test-framework       == 0.6.*
+                      , test-framework-hunit == 0.2.*
+                      , HUnit                == 1.2.*
