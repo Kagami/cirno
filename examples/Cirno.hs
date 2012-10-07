@@ -3,7 +3,7 @@ import System.Environment (getProgName, getArgs)
 
 import Network.XMPP ()
 
-echoBot :: String -> String -> String -> a
+echoBot :: String -> Text -> String -> a
 echoBot = undefined
 
 --echoBot :: JID -> Text -> JID -> XMPP ()

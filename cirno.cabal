@@ -17,11 +17,15 @@ Cabal-version: >= 1.2
 Library
     Exposed-modules: Network.XMPP
 
+    GHC-options:     -Wall
     Hs-source-dirs:  src
+
     Build-depends:   base == 4.*
 
 Executable cirno
     Main-is:        Cirno.hs
+    GHC-options:    -Wall
     Hs-source-dirs: src, examples
+
     Build-depends:    base == 4.*
                     , text == 0.11.*
