@@ -2,7 +2,7 @@
 -- <http://xmpp.org/rfcs/rfc6122.html>
 
 module Network.XMPP.JID
-    ( JID(..)
+    ( JID(jidUsername, jidServer, jidResource)
     , bareJid
     , fullJid
     ) where
