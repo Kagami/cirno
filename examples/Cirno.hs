@@ -1,14 +1,13 @@
 import Data.Text (Text)
+import Control.Applicative ((<$>))
 import System.Environment (getProgName, getArgs)
 
-import Network.XMPP ()
-
-echoBot :: String -> Text -> String -> a
+echoBot :: Text -> Text -> Text -> a
 echoBot = undefined
 
---echoBot :: JID -> Text -> JID -> XMPP ()
+--echoBot :: Text -> Text -> Text -> XMPP ()
 --echoBot jid password jidTo = do
---    let server = jidServer jid
+--    let server = jidServer $ readT jid
 --    runXMPP server $ do
 --        legacyAuth jid password
 --        sendInitialPresence
@@ -19,10 +18,10 @@ echoBot = undefined
 main :: IO ()
 main = do
     progName <- getProgName
-    args <- getArgs
+    args <- map read <$> getArgs
     case args of
         [jid, password, jidTo] ->
-            echoBot (read jid) (read password) (read jidTo)
+            echoBot jid password jidTo
         _ ->
             putStrLn $ "Usage: `" ++ progName ++
                        " bot@jabber.org bot_password you@jabber.org'"
