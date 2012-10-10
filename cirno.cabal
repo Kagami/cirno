@@ -22,6 +22,9 @@ Source-repository head
 Library
     Exposed-modules:    Network.XMPP
     Other-modules:      Network.XMPP.JID
+                        Network.XMPP.Monad
+                        Network.XMPP.XML
+                        Network.XMPP.XMPPConnection
                         Network.XMPP.Utils
 
     GHC-options:        -Wall
@@ -29,9 +32,13 @@ Library
     Default-language:   Haskell98
     Default-extensions: OverloadedStrings
                         RecordWildCards
+                        GeneralizedNewtypeDeriving
+                        ExistentialQuantification
 
     Build-depends:      base == 4.*
                       , text == 0.11.*
+                      , mtl  == 2.0.*
+                      , stm  == 2.4.*
 
 Executable cirno
     Main-is:            Cirno.hs
@@ -53,10 +60,14 @@ Test-suite cirno-tests
     Default-language:   Haskell98
     Default-extensions: OverloadedStrings
                         RecordWildCards
+                        GeneralizedNewtypeDeriving
+                        ExistentialQuantification
     Type:               exitcode-stdio-1.0
 
     Build-depends:      base                 == 4.*
                       , text                 == 0.11.*
+                      , mtl                  == 2.0.*
+                      , stm                  == 2.4.*
                       , test-framework       == 0.6.*
                       , test-framework-hunit == 0.2.*
                       , HUnit                == 1.2.*
