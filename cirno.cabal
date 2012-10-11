@@ -35,10 +35,11 @@ Library
                         GeneralizedNewtypeDeriving
                         ExistentialQuantification
 
-    Build-depends:      base == 4.*
-                      , text == 0.11.*
-                      , mtl  == 2.0.*
-                      , stm  == 2.4.*
+    Build-depends:      base       == 4.*
+                      , text       == 0.11.*
+                      , mtl        == 2.0.*
+                      , stm        == 2.4.*
+                      , containers == 0.4.*
 
 Executable cirno
     Main-is:            Cirno.hs
@@ -68,6 +69,7 @@ Test-suite cirno-tests
                       , text                 == 0.11.*
                       , mtl                  == 2.0.*
                       , stm                  == 2.4.*
+                      , containers           == 0.4.*
                       , test-framework       == 0.6.*
                       , test-framework-hunit == 0.2.*
                       , HUnit                == 1.2.*
