@@ -1,9 +1,11 @@
+{-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+
 module Network.XMPP.XML
-    ( XMLElem(..)
-    , getRest
-    , deepTags
-    , xmppStreamStart
+    ( XML(..)
+    , parseStreamStart
+    , parseTags
     , xml2bytes
+    , tag2bytes
     , getAttr
     , getCData
     ) where
@@ -14,17 +16,17 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Monoid ((<>))
 import Data.ByteString (ByteString)
 import Control.Applicative ((<*))
-import Text.Parsec (getInput, try, satisfy, many, many1,
+import Text.Parsec (parse, getInput, try, satisfy, many, many1,
                     char, string, letter, space, (<|>))
 import Text.Parsec.ByteString (Parser)
 import qualified Data.Text as T
 import qualified Data.ByteString as S
 
 -- | A data structure representing an XML element.
-data XMLElem
+data XML
     -- | Tags have a name, a list of attributes, and a list of child
     -- elements.
-    = XML Text [(Text, Text)] [XMLElem]
+    = XML Text [(Text, Text)] [XML]
 
     -- | Character data just contains a string.
     | CData Text
@@ -34,16 +36,41 @@ data XMLElem
 -- XML parsec parser
 ------------------------------
 
-getRest :: Parser a -> Parser (a, ByteString)
-getRest f = do
-    x <- try f
-    p <- getInput
-    return (x, p)
+parseStreamStart :: ByteString -> (XML, ByteString)
+parseStreamStart = saxParse streamStart
 
-deepTags :: Parser [XMLElem]
+parseTags :: ByteString -> ([XML], ByteString)
+parseTags = saxParse deepTags
+
+saxParse :: Parser a -> ByteString -> (a, ByteString)
+saxParse parser input =
+    case parse saxParse' "" input of
+        Right result ->
+            result
+        Left err ->
+            error $ "XML parser error: " ++ show err
+  where
+    saxParse' = do
+        parsed <- try parser
+        rest <- getInput
+        return (parsed, rest)
+
+streamStart :: Parser XML
+streamStart = do
+    try declaration
+    shallowTag
+
+declaration :: Parser ()
+declaration = do
+    string "<?"
+    many $ satisfy (/='?')
+    string "?>"
+    return ()
+
+deepTags :: Parser [XML]
 deepTags = many $ try deepTag
 
-deepTag :: Parser XMLElem
+deepTag :: Parser XML
 deepTag = do
     XML name attrs _ <- tagStart
     subels <- try (string "/>" >> return [])
@@ -56,10 +83,10 @@ deepTag = do
             return els
     return $ XML name attrs subels
 
-shallowTag :: Parser XMLElem
+shallowTag :: Parser XML
 shallowTag = tagStart <* char '>'
 
-tagStart :: Parser XMLElem
+tagStart :: Parser XML
 tagStart = do
     char '<'
     name <- many1 tokenChar
@@ -79,7 +106,7 @@ attribute = do
     char quote
     return (T.pack name, T.pack value)
 
-cdata :: Parser XMLElem
+cdata :: Parser XML
 cdata = do
     text <- many1 $ plainCdata <|> predefinedEntity
     return $ CData $ T.pack text
@@ -95,29 +122,15 @@ cdata = do
         char ';'
         return entity
 
-xmppStreamStart :: Parser XMLElem
-xmppStreamStart = do
-    try declaration
-    shallowTag
-
-declaration :: Parser ()
-declaration = do
-    char '<'
-    char '?'
-    many $ satisfy (/='?')
-    char '?'
-    char '>'
-    return ()
-
 ------------------------------
--- XML serializer
+-- XML serializers
 ------------------------------
 
 -- | Convert the XML element back to bytes.
-xml2bytes :: XMLElem -> ByteString
+xml2bytes :: XML -> ByteString
 xml2bytes el = xml2bytes' [] [] [el]
 
-xml2bytes' :: [ByteString] -> [ByteString] -> [XMLElem] -> ByteString
+xml2bytes' :: [ByteString] -> [ByteString] -> [XML] -> ByteString
 xml2bytes' acc1 acc2 [] =
     (S.concat $ reverse acc1) <> (S.concat acc2)
 xml2bytes' acc1 acc2 ((CData text):els) =
@@ -134,11 +147,20 @@ xml2bytes' acc1 acc2 ((XML name attrs subels):els) =
       | null subels = acc2
       | otherwise   = ("</" <> enc name <> ">"):acc2
 
+-- | Serialize only first XML tag.
+tag2bytes :: XML -> ByteString
+tag2bytes (CData text) =
+    enc text
+tag2bytes (XML name attrs _) =
+    "<" <> enc name <> attrs2bytes attrs <> ">"
+
 -- | Convert list of attributes to bytestring.
 attrs2bytes :: [(Text, Text)] -> ByteString
 attrs2bytes = S.concat . reverse . (foldl' attrs2bytes' [])
   where
+    -- Fold function.
     attrs2bytes' acc attr = (attr2bytes attr):acc
+    -- Serialize just one key-value pair.
     attr2bytes (name, value) = " " <> enc name <> "='" <> enc value <> "'"
 
 -- | Escape special XML characters.
@@ -159,12 +181,12 @@ escape = S.concat . reverse . (T.foldl' escape' [])
 ------------------------------
 
 -- | Get the value of an attribute in the given tag.
-getAttr :: Text -> XMLElem -> Maybe Text
+getAttr :: Text -> XML -> Maybe Text
 getAttr attr (XML _ attrs _) = lookup attr attrs
 getAttr _ _ = Nothing
 
 -- | Get the character data subelement of the given tag.
-getCData :: XMLElem -> Maybe Text
+getCData :: XML -> Maybe Text
 getCData (XML _ _ [CData text]) = Just text
 getCData _ = Nothing
 

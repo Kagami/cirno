@@ -24,10 +24,12 @@ Library
     Other-modules:      Network.XMPP.JID
                         Network.XMPP.Monad
                         Network.XMPP.XML
+                        Network.XMPP.Stanzas
                         Network.XMPP.XMPPConnection
+                        Network.XMPP.TCPConnection
                         Network.XMPP.Utils
 
-    GHC-options:        -Wall -fno-warn-unused-do-bind
+    GHC-options:        -Wall
     Hs-source-dirs:     src
     Default-language:   Haskell98
     Default-extensions: OverloadedStrings
@@ -42,6 +44,7 @@ Library
                       , containers == 0.4.*
                       , bytestring == 0.9.*
                       , parsec     == 3.1.*
+                      , network    == 2.4.*
 
 Executable cirno
     Main-is:            Cirno.hs
@@ -58,7 +61,7 @@ Executable cirno
 Test-suite cirno-tests
     Main-is:            Tests.hs
 
-    GHC-options:        -Wall -fno-warn-unused-do-bind
+    GHC-options:        -Wall
     Hs-source-dirs:     src, tests
     Default-language:   Haskell98
     Default-extensions: OverloadedStrings
@@ -74,6 +77,8 @@ Test-suite cirno-tests
                       , containers           == 0.4.*
                       , bytestring           == 0.9.*
                       , parsec               == 3.1.*
+                      , network              == 2.4.*
+
                       , test-framework       == 0.6.*
                       , test-framework-hunit == 0.2.*
                       , HUnit                == 1.2.*

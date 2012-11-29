@@ -8,6 +8,7 @@ module Network.XMPP.Monad
     , StanzaHandler
     , addHandler
     , addHandlerOnce
+    , sendStanza
     ) where
 
 import Data.Unique (Unique, newUnique)
@@ -18,15 +19,16 @@ import Control.Concurrent.STM (atomically, TVar, newTVarIO, readTVarIO,
                                modifyTVar')
 import qualified Data.Map as M
 
-import Network.XMPP.XML (XMLElem)
-import Network.XMPP.XMPPConnection (XMPPConnection, getStanzas)
+import Network.XMPP.XML (XML)
+import Network.XMPP.XMPPConnection (XMPPConnection(getStanzas))
+import qualified Network.XMPP.XMPPConnection as XMPPConn
 
 -- | Stanza handler (callback).
 data XMPPHandler = Catch StanzaPredicate StanzaHandler
                  | CatchOnce StanzaPredicate StanzaHandler
 
-type StanzaPredicate = XMLElem -> Bool
-type StanzaHandler = XMLElem -> XMPP ()
+type StanzaPredicate = XML -> Bool
+type StanzaHandler = XML -> XMPP ()
 
 -- | Handlers dict. Each handler has assotiated unique value with him
 -- (created on handler addition).
@@ -42,7 +44,7 @@ data XMPPState = forall c. XMPPConnection c => XMPPState
 newtype XMPP a = XMPP { unXMPP :: ReaderT XMPPState IO a }
     deriving (Monad, MonadIO)
 
--- | Initialize monad state.
+-- | Initialize monad state and XMPP stream.
 initXMPP :: XMPPConnection c => c -> IO XMPPState
 initXMPP c = do
     handlers <- newTVarIO M.empty
@@ -63,7 +65,7 @@ runXMPPLoop state m = do
     runXMPP state m
     runXMPPLoop' state []
 
-runXMPPLoop' :: XMPPState -> [XMLElem] -> IO ()
+runXMPPLoop' :: XMPPState -> [XML] -> IO ()
 runXMPPLoop' state@(XMPPState { .. }) [] = do
     handlers <- readTVarIO stateHandlers
     when (not $ M.null handlers) $
@@ -81,10 +83,10 @@ runXMPPLoop' state@(XMPPState { .. }) (stanza:stanzas) = do
     runXMPPLoop' state stanzas
 
 -- | Find handler for the given stanza based on predicates.
-findHandler :: XMLElem -> XMPPHandlers -> Maybe (Unique, XMPPHandler)
+findHandler :: XML -> XMPPHandlers -> Maybe (Unique, XMPPHandler)
 findHandler stanza = findHandler' stanza . M.toList
 
-findHandler' :: XMLElem -> [(Unique, XMPPHandler)]
+findHandler' :: XML -> [(Unique, XMPPHandler)]
              -> Maybe (Unique, XMPPHandler)
 findHandler' _ [] = Nothing
 findHandler' stanza ((uniq, handler):handlers) =
@@ -93,8 +95,8 @@ findHandler' stanza ((uniq, handler):handlers) =
        else findHandler' stanza handlers
   where
     predicate = case handler of
-        Catch pred' _ -> pred'
-        CatchOnce pred' _ -> pred'
+        Catch p _ -> p
+        CatchOnce p _ -> p
 
 -- | Add handler that will be executed each time when the
 -- given predicate matches stanza.
@@ -110,3 +112,9 @@ addHandler' handler = do
     XMPPState { .. } <- XMPP ask
     uniq <- liftIO $ newUnique
     liftIO $ atomically $ modifyTVar' stateHandlers (M.insert uniq handler)
+
+-- | Send given stanza over the current XMPP connection.
+sendStanza :: XML -> XMPP ()
+sendStanza stanza = do
+    XMPPState { .. } <- XMPP ask
+    liftIO $ XMPPConn.sendStanza stateConnection stanza
