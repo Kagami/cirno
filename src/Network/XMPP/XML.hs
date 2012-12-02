@@ -11,14 +11,14 @@ module Network.XMPP.XML
     ) where
 
 import Data.List (foldl')
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
-import Data.Monoid ((<>))
 import Data.ByteString (ByteString)
-import Control.Applicative ((<*))
+import Control.Applicative ((<*), (*>))
 import Text.Parsec (parse, getInput, try, satisfy, many, many1,
                     char, string, letter, space, (<|>))
-import Text.Parsec.ByteString (Parser)
+import Text.Parsec.Text (Parser)
 import qualified Data.Text as T
 import qualified Data.ByteString as S
 
@@ -36,13 +36,13 @@ data XML
 -- XML parsec parser
 ------------------------------
 
-parseStreamStart :: ByteString -> (XML, ByteString)
+parseStreamStart :: Text -> (XML, Text)
 parseStreamStart = saxParse streamStart
 
-parseTags :: ByteString -> ([XML], ByteString)
+parseTags :: Text -> ([XML], Text)
 parseTags = saxParse deepTags
 
-saxParse :: Parser a -> ByteString -> (a, ByteString)
+saxParse :: Parser a -> Text -> (a, Text)
 saxParse parser input =
     case parse saxParse' "" input of
         Right result ->
@@ -57,8 +57,8 @@ saxParse parser input =
 
 streamStart :: Parser XML
 streamStart = do
-    try declaration
-    shallowTag
+    try (declaration >> shallowTag)
+    <|> shallowTag
 
 declaration :: Parser ()
 declaration = do
@@ -66,6 +66,9 @@ declaration = do
     many $ satisfy (/='?')
     string "?>"
     return ()
+
+shallowTag :: Parser XML
+shallowTag = tagStart <* char '>'
 
 deepTags :: Parser [XML]
 deepTags = many $ try deepTag
@@ -83,15 +86,12 @@ deepTag = do
             return els
     return $ XML name attrs subels
 
-shallowTag :: Parser XML
-shallowTag = tagStart <* char '>'
-
 tagStart :: Parser XML
 tagStart = do
     char '<'
     name <- many1 tokenChar
-    many1 space
-    attrs <- many $ attribute <* many1 space
+    attrs <- many $ many1 space *> attribute
+    many space
     return $ XML (T.pack name) attrs []
 
 tokenChar :: Parser Char
@@ -136,7 +136,7 @@ xml2bytes' acc1 acc2 [] =
 xml2bytes' acc1 acc2 ((CData text):els) =
     xml2bytes' acc1 ((escape text):acc2) els
 xml2bytes' acc1 acc2 ((XML name attrs subels):els) =
-    -- TODO: Could we get rid of slow (++) operator?
+    -- TODO: Could we throw out slow (++) operator?
     xml2bytes' (open:acc1) acc2' (subels ++ els)
   where
     open = "<" <> enc name <> attrs2bytes attrs <> open'

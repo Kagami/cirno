@@ -11,6 +11,11 @@ module Network.XMPP.Monad
     , sendStanza
     ) where
 
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.Monoid ((<>))
+import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8')
+import Data.ByteString (ByteString)
 import Data.Unique (Unique, newUnique)
 import Control.Monad (when)
 import Control.Monad.Reader (ReaderT, runReaderT, ask)
@@ -18,10 +23,11 @@ import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Concurrent.STM (atomically, TVar, newTVarIO, readTVarIO,
                                modifyTVar')
 import qualified Data.Map as M
+import qualified Data.Text as T
+import qualified Data.ByteString as S
 
-import Network.XMPP.XML (XML)
-import Network.XMPP.XMPPConnection (XMPPConnection(getStanzas))
-import qualified Network.XMPP.XMPPConnection as XMPPConn
+import Network.XMPP.XML (XML, xml2bytes, parseTags)
+import Network.XMPP.XMPPConnection (XMPPConnection(getBytes, sendBytes))
 
 -- | Stanza handler (callback).
 data XMPPHandler = Catch StanzaPredicate StanzaHandler
@@ -37,6 +43,7 @@ type XMPPHandlers = M.Map Unique XMPPHandler
 -- | State which we can read and modify inside monad.
 data XMPPState = forall c. XMPPConnection c => XMPPState
     { stateConnection :: c
+    , stateBuffer :: IORef Text
     , stateHandlers :: TVar XMPPHandlers
     }
 
@@ -47,11 +54,12 @@ newtype XMPP a = XMPP { unXMPP :: ReaderT XMPPState IO a }
 -- | Initialize monad state and XMPP stream.
 initXMPP :: XMPPConnection c => c -> IO XMPPState
 initXMPP c = do
+    bufvar <- newIORef T.empty
     handlers <- newTVarIO M.empty
-    return $ XMPPState c handlers
+    return $ XMPPState c bufvar handlers
 
 -- | Run function inside the XMPP monad.
-runXMPP :: XMPPState -> XMPP () -> IO ()
+runXMPP :: XMPPState -> XMPP a -> IO a
 runXMPP state m = runReaderT (unXMPP m) state
 
 -- | Run function inside the XMPP monad. After that, keep looping as
@@ -69,7 +77,7 @@ runXMPPLoop' :: XMPPState -> [XML] -> IO ()
 runXMPPLoop' state@(XMPPState { .. }) [] = do
     handlers <- readTVarIO stateHandlers
     when (not $ M.null handlers) $
-        getStanzas stateConnection >>= runXMPPLoop' state
+        runXMPP state getStanzas >>= runXMPPLoop' state
 runXMPPLoop' state@(XMPPState { .. }) (stanza:stanzas) = do
     handlers <- readTVarIO stateHandlers
     case findHandler stanza handlers of
@@ -113,8 +121,28 @@ addHandler' handler = do
     uniq <- liftIO $ newUnique
     liftIO $ atomically $ modifyTVar' stateHandlers (M.insert uniq handler)
 
+-- | Try to get new stanzas from the connection.
+getStanzas :: XMPP [XML]
+getStanzas = getStanzas' S.empty
+
+getStanzas' :: ByteString -> XMPP [XML]
+getStanzas' cache = do
+    XMPPState { .. } <- XMPP ask
+    input <- liftIO $ getBytes stateConnection
+    case decodeUtf8' input of
+        Left _ ->
+            -- UTF8 decoding error. Add data to cache and try once more.
+            -- It could be a problem if we will often get not-valid
+            -- chunk of UTF8 from socket.
+            getStanzas' (cache <> input)
+        Right input' -> do
+            buffer <- liftIO $ readIORef stateBuffer
+            let (tags, rest) = parseTags (buffer <> input')
+            liftIO $ writeIORef stateBuffer rest
+            return tags
+
 -- | Send given stanza over the current XMPP connection.
 sendStanza :: XML -> XMPP ()
 sendStanza stanza = do
     XMPPState { .. } <- XMPP ask
-    liftIO $ XMPPConn.sendStanza stateConnection stanza
+    liftIO $ sendBytes stateConnection $ xml2bytes stanza

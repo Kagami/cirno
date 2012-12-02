@@ -4,23 +4,18 @@ module Network.XMPP.TCPConnection
     ) where
 
 import Control.Applicative ((<$>))
-import Data.Monoid ((<>))
 import Data.Text (Text)
-import Data.ByteString (ByteString)
-import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Network.Socket (Socket, Family(AF_INET6), SocketType(Stream),
                        defaultProtocol, getAddrInfo, addrAddress,
                        socket, connect, close)
 import Network.Socket.ByteString (sendAll, recv)
 import qualified Data.Text as T
-import qualified Data.ByteString as S
 
 import Network.XMPP.Monad (XMPPState, initXMPP)
 import Network.XMPP.XMPPConnection (XMPPConnection(..))
-import Network.XMPP.XML (parseTags, xml2bytes)
 
 -- | An XMPP connection over TCP.
-data TCPConnection = TCPConnection Socket (IORef ByteString)
+newtype TCPConnection = TCPConnection Socket
 
 type Server = Text
 type Port = Int
@@ -33,18 +28,12 @@ openTCPConnection server mport = do
     let port = maybe "5222" show mport
     addrInfo <- head <$> getAddrInfo Nothing (Just host) (Just port)
     connect sock (addrAddress addrInfo)
-    bufvar <- newIORef S.empty
-    initXMPP $ TCPConnection sock bufvar
+    initXMPP $ TCPConnection sock
 
 instance XMPPConnection TCPConnection where
-    getStanzas (TCPConnection sock bufvar) = do
-        buffer <- readIORef bufvar
-        input <- recv sock 4096
-        let buffer' = buffer <> input
-        let (tags, rest) = parseTags buffer'
-        writeIORef bufvar rest
-        return tags
-    sendStanza (TCPConnection sock _) =
-        sendAll sock . xml2bytes
-    closeConnection (TCPConnection sock _) =
+    getBytes (TCPConnection sock) =
+        recv sock 4096
+    sendBytes (TCPConnection sock) =
+        sendAll sock
+    closeConnection (TCPConnection sock) =
         close sock
