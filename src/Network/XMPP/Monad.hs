@@ -8,7 +8,9 @@ module Network.XMPP.Monad
     , StanzaHandler
     , addHandler
     , addHandlerOnce
+    , waitForStanza
     , sendStanza
+    , sendStreamStart
     ) where
 
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
@@ -21,12 +23,14 @@ import Control.Monad (when)
 import Control.Monad.Reader (ReaderT, runReaderT, ask)
 import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Concurrent.STM (atomically, TVar, newTVarIO, readTVarIO,
-                               modifyTVar')
+                               modifyTVar', newEmptyTMVarIO, takeTMVar,
+                               putTMVar)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.ByteString as S
 
-import Network.XMPP.XML (XML, xml2bytes, parseTags)
+import Network.XMPP.JID (JID(jidServer))
+import Network.XMPP.XML (XML(..), xml2bytes, tag2bytes, parseTags)
 import Network.XMPP.XMPPConnection (XMPPConnection(getBytes, sendBytes))
 
 -- | Stanza handler (callback).
@@ -45,6 +49,7 @@ data XMPPState = forall c. XMPPConnection c => XMPPState
     { stateConnection :: c
     , stateBuffer :: IORef Text
     , stateHandlers :: TVar XMPPHandlers
+    , stateJID :: JID
     }
 
 -- | XMPP monad.
@@ -52,11 +57,11 @@ newtype XMPP a = XMPP { unXMPP :: ReaderT XMPPState IO a }
     deriving (Monad, MonadIO)
 
 -- | Initialize monad state and XMPP stream.
-initXMPP :: XMPPConnection c => c -> IO XMPPState
-initXMPP c = do
+initXMPP :: XMPPConnection c => c -> JID -> IO XMPPState
+initXMPP c jid = do
     bufvar <- newIORef T.empty
     handlers <- newTVarIO M.empty
-    return $ XMPPState c bufvar handlers
+    return $ XMPPState c bufvar handlers jid
 
 -- | Run function inside the XMPP monad.
 runXMPP :: XMPPState -> XMPP a -> IO a
@@ -141,8 +146,30 @@ getStanzas' cache = do
             liftIO $ writeIORef stateBuffer rest
             return tags
 
+-- | Blockingly wait for the stanza matching the given predicate.
+waitForStanza :: StanzaPredicate -> XMPP XML
+waitForStanza predicate = do
+    box <- liftIO newEmptyTMVarIO
+    addHandlerOnce predicate $ liftIO . atomically . (putTMVar box)
+    liftIO $ atomically $ takeTMVar box
+
 -- | Send given stanza over the current XMPP connection.
 sendStanza :: XML -> XMPP ()
 sendStanza stanza = do
     XMPPState { .. } <- XMPP ask
     liftIO $ sendBytes stateConnection $ xml2bytes stanza
+
+sendStreamStart :: XMPP ()
+sendStreamStart = do
+    XMPPState { .. } <- XMPP ask
+    liftIO $ sendBytes stateConnection $ tag2bytes $ streamStart stateJID
+
+-- | Opening stream tag for the given XMPP server.
+streamStart :: JID -> XML
+streamStart jid =
+    XML "stream:stream"
+        [ ("to", jidServer jid)
+        , ("xmlns", "jabber:client")
+        , ("xmlns:stream","http://etherx.jabber.org/streams")
+        ]
+        []

@@ -17,7 +17,7 @@ module Network.XMPP
 import Data.Monoid ((<>))
 
 import Network.XMPP.JID
-import Network.XMPP.Monad hiding (initXMPP)
+import Network.XMPP.Monad hiding (initXMPP, sendStreamStart)
 import Network.XMPP.XML
 import Network.XMPP.Stanzas
 import Network.XMPP.Utils
