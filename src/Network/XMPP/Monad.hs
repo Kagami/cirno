@@ -10,7 +10,7 @@ module Network.XMPP.Monad
     , addHandlerOnce
     , waitForStanza
     , sendStanza
-    , sendStreamStart
+    , initStream
     ) where
 
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
@@ -136,9 +136,9 @@ getStanzas' cache = do
     input <- liftIO $ getBytes stateConnection
     case decodeUtf8' input of
         Left _ ->
-            -- UTF8 decoding error. Add data to cache and try once more.
-            -- It could be a problem if we will often get not-valid
-            -- chunk of UTF8 from socket.
+            -- XXX: UTF-8 decoding error. Add data to cache and try once
+            -- more. It could be a problem if we will often get
+            -- not-valid chunks of UTF-8 data from socket.
             getStanzas' (cache <> input)
         Right input' -> do
             buffer <- liftIO $ readIORef stateBuffer
@@ -159,8 +159,10 @@ sendStanza stanza = do
     XMPPState { .. } <- XMPP ask
     liftIO $ sendBytes stateConnection $ xml2bytes stanza
 
-sendStreamStart :: XMPP ()
-sendStreamStart = do
+-- | Initialize XMPP stream. Must be run just after the connection
+-- was established.
+initStream :: XMPP ()
+initStream = do
     XMPPState { .. } <- XMPP ask
     liftIO $ sendBytes stateConnection $ tag2bytes $ streamStart stateJID
 

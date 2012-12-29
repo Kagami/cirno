@@ -1,13 +1,18 @@
-import Data.Text (Text)
-import Control.Applicative ((<$>))
+{-# LANGUAGE OverloadedStrings #-}
+
 import System.Environment (getProgName, getArgs)
 
-echoBot :: Text -> Text -> Text -> a
-echoBot = undefined
+import Network.XMPP (XML(..), openTCPConnection, runXMPPLoop,
+                     initStream, sendStanza)
 
---echoBot :: Text -> Text -> Text -> XMPP ()
---echoBot jid password jidTo = do
---    let server = jidServer $ readT jid
+echoBot :: [String] -> IO ()
+echoBot [jidS, _password, _jidToS] = do
+    let jid = read jidS
+    state <- openTCPConnection jid Nothing
+    runXMPPLoop state $ do
+        initStream
+        sendStanza $ XML "test" [] []
+
 --    runXMPP server $ do
 --        legacyAuth jid password
 --        sendInitialPresence
@@ -18,10 +23,8 @@ echoBot = undefined
 main :: IO ()
 main = do
     progName <- getProgName
-    args <- map read <$> getArgs
-    case args of
-        [jid, password, jidTo] ->
-            echoBot jid password jidTo
-        _ ->
-            putStrLn $ "Usage: `" ++ progName ++
-                       " bot@jabber.org bot_password you@jabber.org'"
+    args <- getArgs
+    case length args of
+        3 -> echoBot args
+        _ -> putStrLn $ "Usage: `" ++ progName ++
+                        " bot@jabber.org bot_password you@jabber.org'"

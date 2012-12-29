@@ -4,7 +4,8 @@ module Network.XMPP.TCPConnection
     ) where
 
 import Control.Applicative ((<$>))
-import Network.Socket (Socket, Family(AF_INET6), SocketType(Stream),
+import Debug.Trace (traceIO)
+import Network.Socket (Socket, Family(AF_INET), SocketType(Stream),
                        defaultProtocol, getAddrInfo, addrAddress,
                        socket, connect, close)
 import Network.Socket.ByteString (sendAll, recv)
@@ -18,9 +19,17 @@ import Network.XMPP.XMPPConnection (XMPPConnection(..))
 newtype TCPConnection = TCPConnection Socket
 
 -- | Open a TCP connection to the named server and send a stream header.
+-- FIXME: Address family must be AF_INET6:
+-- > If AF_INET6 is used, the IPv6Only socket option is set to 0 so
+-- > that both IPv4 and IPv6 can be handled with one socket
+-- But in fact that doesn't work:
+-- > info <- head `fmap` getAddrInfo Nothing (Just "localhost") (Just "5222")
+-- > sock <- socket AF_INET6 Stream defaultProtocol
+-- > connect sock (addrAddress info)
+-- *** Exception: connect: invalid argument (Invalid argument)
 openTCPConnection :: JID -> Maybe Int -> IO XMPPState
 openTCPConnection jid mport = do
-    sock <- socket AF_INET6 Stream defaultProtocol
+    sock <- socket AF_INET Stream defaultProtocol
     let host = T.unpack $ jidServer jid
     let port = maybe "5222" show mport
     addrInfo <- head <$> getAddrInfo Nothing (Just host) (Just port)
@@ -28,9 +37,23 @@ openTCPConnection jid mport = do
     initXMPP (TCPConnection sock) jid
 
 instance XMPPConnection TCPConnection where
-    getBytes (TCPConnection sock) =
+
+    getBytes (TCPConnection sock) = do
+#ifdef DEBUG
+        bytes <- recv sock 4096
+        traceIO $ "GET: " ++ (show bytes)
+        return bytes
+#else
         recv sock 4096
-    sendBytes (TCPConnection sock) =
-        sendAll sock
+#endif
+
+    sendBytes (TCPConnection sock) bytes = do
+#ifdef DEBUG
+        traceIO $ "SEND: " ++ (show bytes)
+        sendAll sock bytes
+#else
+        sendAll sock bytes
+#endif
+
     closeConnection (TCPConnection sock) =
         close sock

@@ -3,8 +3,8 @@
 
 module Network.XMPP.JID
     ( JID(jidUsername, jidServer, jidResource)
-    , bareJid
-    , fullJid
+    , bareJID
+    , fullJID
     ) where
 
 import Data.Text (Text)
@@ -35,14 +35,17 @@ instance ReadT JID where
             Just n -> (T.take n rest, T.drop (n+1) rest)
             _      -> (rest, "")
 
-bareJid :: JID -> Text
-bareJid JID { .. } =
+instance Show JID where
+    show = show . fullJID
+
+bareJID :: JID -> Text
+bareJID JID { .. } =
     if T.null jidUsername
         then jidServer
         else jidUsername <> "@" <> jidServer
 
-fullJid :: JID -> Text
-fullJid jid@JID { .. } =
+fullJID :: JID -> Text
+fullJID jid@JID { .. } =
     if T.null jidResource
-        then bareJid jid
-        else bareJid jid <> "/" <> jidResource
+        then bareJID jid
+        else bareJID jid <> "/" <> jidResource
