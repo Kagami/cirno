@@ -13,6 +13,7 @@ module Network.XMPP.Monad
     , initStream
     ) where
 
+import Control.Applicative ((<$>))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Monoid ((<>))
 import Data.Text (Text)
@@ -30,7 +31,8 @@ import qualified Data.Text as T
 import qualified Data.ByteString as S
 
 import Network.XMPP.JID (JID(jidServer))
-import Network.XMPP.XML (XML(..), xml2bytes, tag2bytes, parseTags)
+import Network.XMPP.XML (XML(..), XMLParser, xml2bytes, tag2bytes,
+                         parseXML, parseStreamStart)
 import Network.XMPP.XMPPConnection (XMPPConnection(getBytes, sendBytes))
 
 -- | Stanza handler (callback).
@@ -54,7 +56,7 @@ data XMPPState = forall c. XMPPConnection c => XMPPState
 
 -- | XMPP monad.
 newtype XMPP a = XMPP { unXMPP :: ReaderT XMPPState IO a }
-    deriving (Monad, MonadIO)
+    deriving (Functor, Monad, MonadIO)
 
 -- | Initialize monad state and XMPP stream.
 initXMPP :: XMPPConnection c => c -> JID -> IO XMPPState
@@ -82,7 +84,7 @@ runXMPPLoop' :: XMPPState -> [XML] -> IO ()
 runXMPPLoop' state@(XMPPState { .. }) [] = do
     handlers <- readTVarIO stateHandlers
     when (not $ M.null handlers) $
-        runXMPP state getStanzas >>= runXMPPLoop' state
+        runXMPP state (getStanzas parseXML) >>= runXMPPLoop' state
 runXMPPLoop' state@(XMPPState { .. }) (stanza:stanzas) = do
     handlers <- readTVarIO stateHandlers
     case findHandler stanza handlers of
@@ -95,7 +97,7 @@ runXMPPLoop' state@(XMPPState { .. }) (stanza:stanzas) = do
             return ()
     runXMPPLoop' state stanzas
 
--- | Find handler for the given stanza based on predicates.
+-- | Find handler for the given stanza using predicates.
 findHandler :: XML -> XMPPHandlers -> Maybe (Unique, XMPPHandler)
 findHandler stanza = findHandler' stanza . M.toList
 
@@ -126,12 +128,12 @@ addHandler' handler = do
     uniq <- liftIO $ newUnique
     liftIO $ atomically $ modifyTVar' stateHandlers (M.insert uniq handler)
 
--- | Try to get new stanzas from the connection.
-getStanzas :: XMPP [XML]
+-- | Blockingly get new stanzas from the connection.
+getStanzas :: XMLParser -> XMPP [XML]
 getStanzas = getStanzas' S.empty
 
-getStanzas' :: ByteString -> XMPP [XML]
-getStanzas' cache = do
+getStanzas' :: ByteString -> XMLParser -> XMPP [XML]
+getStanzas' cache parser = do
     XMPPState { .. } <- XMPP ask
     input <- liftIO $ getBytes stateConnection
     case decodeUtf8' input of
@@ -139,10 +141,10 @@ getStanzas' cache = do
             -- XXX: UTF-8 decoding error. Add data to cache and try once
             -- more. It could be a problem if we will often get
             -- not-valid chunks of UTF-8 data from socket.
-            getStanzas' (cache <> input)
+            getStanzas' (cache <> input) parser
         Right input' -> do
             buffer <- liftIO $ readIORef stateBuffer
-            let (tags, rest) = parseTags (buffer <> input')
+            let (tags, rest) = parser (buffer <> input')
             liftIO $ writeIORef stateBuffer rest
             return tags
 
@@ -164,14 +166,19 @@ sendStanza stanza = do
 initStream :: XMPP ()
 initStream = do
     XMPPState { .. } <- XMPP ask
-    liftIO $ sendBytes stateConnection $ tag2bytes $ streamStart stateJID
+    liftIO $ sendBytes stateConnection $ streamStart stateJID
+    stream <- head <$> getStanzas parseStreamStart
+    liftIO $ print stream
+    return ()
 
 -- | Opening stream tag for the given XMPP server.
-streamStart :: JID -> XML
+streamStart :: JID -> ByteString
 streamStart jid =
-    XML "stream:stream"
-        [ ("to", jidServer jid)
-        , ("xmlns", "jabber:client")
-        , ("xmlns:stream","http://etherx.jabber.org/streams")
-        ]
-        []
+    "<?xml version='1.0'?>" <>
+    (tag2bytes $
+        XML "stream:stream"
+            [ ("to", jidServer jid)
+            , ("xmlns", "jabber:client")
+            , ("xmlns:stream","http://etherx.jabber.org/streams")
+            ]
+        [])

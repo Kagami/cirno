@@ -2,8 +2,9 @@
 
 module Network.XMPP.XML
     ( XML(..)
+    , XMLParser
     , parseStreamStart
-    , parseTags
+    , parseXML
     , xml2bytes
     , tag2bytes
     , getAttr
@@ -36,11 +37,17 @@ data XML
 -- XML parsec parser
 ------------------------------
 
-parseStreamStart :: Text -> (XML, Text)
-parseStreamStart = saxParse streamStart
+type XMLParser = Text -> ([XML], Text)
 
-parseTags :: Text -> ([XML], Text)
-parseTags = saxParse deepTags
+-- XXX: opening stream is just one tag, but same type helps to
+-- make 'getStanzas' function simplier.
+parseStreamStart :: XMLParser
+parseStreamStart input =
+    let (tag, rest) = saxParse streamStart input
+    in ([tag], rest)
+
+parseXML :: XMLParser
+parseXML = saxParse deepTags
 
 saxParse :: Parser a -> Text -> (a, Text)
 saxParse parser input =
