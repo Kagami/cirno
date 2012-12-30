@@ -7,11 +7,12 @@ module Network.XMPP.XML
     , parseXML
     , xml2bytes
     , tag2bytes
+    , xmlPath
     , getAttr
     , getCData
     ) where
 
-import Data.List (foldl')
+import Data.List (foldl', find)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
@@ -135,24 +136,20 @@ cdata = do
 
 -- | Convert the XML element back to bytes.
 xml2bytes :: XML -> ByteString
-xml2bytes el = xml2bytes' [] [] [el]
-
-xml2bytes' :: [ByteString] -> [ByteString] -> [XML] -> ByteString
-xml2bytes' acc1 acc2 [] =
-    (S.concat $ reverse acc1) <> (S.concat acc2)
-xml2bytes' acc1 acc2 ((CData text):els) =
-    xml2bytes' acc1 ((escape text):acc2) els
-xml2bytes' acc1 acc2 ((XML name attrs subels):els) =
-    -- TODO: Could we throw out slow (++) operator?
-    xml2bytes' (open:acc1) acc2' (subels ++ els)
+xml2bytes (CData text) = escape text
+xml2bytes (XML name attrs subels) =
+    -- FIXME: No tail recursion, it could be stack overflow
+    -- on the BIG stanzas.
+    open <> S.concat (map xml2bytes subels) <> close
   where
-    open = "<" <> enc name <> attrs2bytes attrs <> open'
+    name' = enc name
+    open = "<" <> name' <> attrs2bytes attrs <> open'
     open'
       | null subels = "/>"
       | otherwise   = ">"
-    acc2'
-      | null subels = acc2
-      | otherwise   = ("</" <> enc name <> ">"):acc2
+    close
+      | null subels = ""
+      | otherwise   = "</" <> name' <> ">"
 
 -- | Serialize only first XML tag.
 tag2bytes :: XML -> ByteString
@@ -184,8 +181,20 @@ escape = S.concat . reverse . (T.foldl' escape' [])
         _    -> enc $ T.singleton ch
 
 ------------------------------
--- Helper functions
+-- Helpers.
 ------------------------------
+
+-- |Follow a \"path\" of named subtags in an XML tree. For every
+-- element in the given list, find the subtag with that name and
+-- proceed recursively.
+xmlPath :: [Text] -> XML -> Maybe XML
+xmlPath []           el            = return el
+xmlPath _            (CData _)     = Nothing
+xmlPath (name:names) (XML _ _ els) = do
+    el <- find (\stanza -> case stanza of
+                   (XML name' _ _) -> name == name'
+                   _               -> False) els
+    xmlPath names el
 
 -- | Get the value of an attribute in the given tag.
 getAttr :: Text -> XML -> Maybe Text

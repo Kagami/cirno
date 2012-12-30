@@ -1,24 +1,27 @@
 module Network.XMPP
     ( (<>)
-    -- * XML functions
+      -- * XML functions
     , XML(..)
-    -- * JID functions
+      -- * JID functions
     , module Network.XMPP.JID
-    -- * The XMPP monad
+      -- * The XMPP monad
     , module Network.XMPP.Monad
-    -- * Stanza-related functional
+      -- * Stanza-related functional
     , module Network.XMPP.Stanzas
-    -- * Helpers
+      -- * Authentication
+    , module Network.XMPP.Auth
+      -- * Helpers
     , module Network.XMPP.Utils
-    -- * Manage connections
+      -- * Manage connections
     , openTCPConnection
     ) where
 
 import Data.Monoid ((<>))
 
 import Network.XMPP.JID
-import Network.XMPP.Monad hiding (initXMPP)
 import Network.XMPP.XML
+import Network.XMPP.Monad hiding (initXMPP)
 import Network.XMPP.Stanzas
+import Network.XMPP.Auth
 import Network.XMPP.Utils
 import Network.XMPP.TCPConnection (openTCPConnection)

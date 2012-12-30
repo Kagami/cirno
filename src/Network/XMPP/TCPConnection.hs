@@ -4,16 +4,23 @@ module Network.XMPP.TCPConnection
     ) where
 
 import Control.Applicative ((<$>))
-import Debug.Trace (traceIO)
 import Network.Socket (Socket, Family(AF_INET), SocketType(Stream),
                        defaultProtocol, getAddrInfo, addrAddress,
                        socket, connect, close)
 import Network.Socket.ByteString (sendAll, recv)
 import qualified Data.Text as T
 
+#ifdef DEBUG
+import Data.Monoid ((<>))
+import Debug.Trace (traceIO)
+import qualified Data.ByteString.Char8 as S
+#endif
+
 import Network.XMPP.JID (JID(jidServer))
 import Network.XMPP.Monad (XMPPState, initXMPP)
 import Network.XMPP.XMPPConnection (XMPPConnection(..))
+
+-- FIXME: check for errors!
 
 -- | An XMPP connection over TCP.
 newtype TCPConnection = TCPConnection Socket
@@ -41,7 +48,7 @@ instance XMPPConnection TCPConnection where
     getBytes (TCPConnection sock) = do
 #ifdef DEBUG
         bytes <- recv sock 4096
-        traceIO $ "GET: " ++ (show bytes)
+        traceIO $ S.unpack $ "\ESC[1;31m" <> "GET: " <> "\ESC[0m" <> bytes
         return bytes
 #else
         recv sock 4096
@@ -49,7 +56,7 @@ instance XMPPConnection TCPConnection where
 
     sendBytes (TCPConnection sock) bytes = do
 #ifdef DEBUG
-        traceIO $ "SEND: " ++ (show bytes)
+        traceIO $ S.unpack $ "\ESC[1;31m" <> "SEND: " <> "\ESC[0m" <> bytes
         sendAll sock bytes
 #else
         sendAll sock bytes

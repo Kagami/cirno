@@ -10,7 +10,6 @@ Category:      Network
 Stability:     Experimental
 Synopsis:      Dumb XMPP library, the successor of the XMPP lib
 Description:   Dumb XMPP library, the successor of the XMPP lib.
-               Package contains simple echo bot example "cirno".
 
 Build-type:    Simple
 Cabal-version: >= 1.7
@@ -26,9 +25,10 @@ Flag debug
 Library
     Exposed-modules: Network.XMPP
     Other-modules:   Network.XMPP.JID
-                     Network.XMPP.Monad
                      Network.XMPP.XML
+                     Network.XMPP.Monad
                      Network.XMPP.Stanzas
+                     Network.XMPP.Auth
                      Network.XMPP.XMPPConnection
                      Network.XMPP.TCPConnection
                      Network.XMPP.Utils
@@ -38,6 +38,7 @@ Library
                      RecordWildCards
                      GeneralizedNewtypeDeriving
                      ExistentialQuantification
+                     NamedFieldPuns
                      CPP
     Build-depends:   base       == 4.*
                    , text       == 0.11.*
@@ -47,6 +48,7 @@ Library
                    , bytestring == 0.9.*
                    , parsec     == 3.1.*
                    , network    == 2.4.*
+                   , random     == 1.0.*
     if flag(debug)
         CPP-options: -DDEBUG
 
@@ -58,6 +60,7 @@ Test-suite cirno-tests
                      RecordWildCards
                      GeneralizedNewtypeDeriving
                      ExistentialQuantification
+                     NamedFieldPuns
                      CPP
     Type:            exitcode-stdio-1.0
     Build-depends:   test-framework       == 0.6.*

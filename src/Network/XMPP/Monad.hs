@@ -1,6 +1,7 @@
 module Network.XMPP.Monad
     ( XMPP
     , initXMPP
+    , getJID
     , runXMPP
     , runXMPPLoop
     , XMPPState
@@ -20,9 +21,10 @@ import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8')
 import Data.ByteString (ByteString)
 import Data.Unique (Unique, newUnique)
-import Control.Monad (when)
+import Control.Monad (void)
 import Control.Monad.Reader (ReaderT, runReaderT, ask)
 import Control.Monad.Trans (MonadIO, liftIO)
+import Control.Concurrent (forkIO)
 import Control.Concurrent.STM (atomically, TVar, newTVarIO, readTVarIO,
                                modifyTVar', newEmptyTMVarIO, takeTMVar,
                                putTMVar)
@@ -65,34 +67,42 @@ initXMPP c jid = do
     handlers <- newTVarIO M.empty
     return $ XMPPState c bufvar handlers jid
 
+-- | Get user's JID from the state.
+getJID :: XMPP JID
+getJID = do
+    XMPPState { stateJID } <- XMPP ask
+    return stateJID
+
 -- | Run function inside the XMPP monad.
 runXMPP :: XMPPState -> XMPP a -> IO a
 runXMPP state m = runReaderT (unXMPP m) state
 
--- | Run function inside the XMPP monad. After that, keep looping as
--- long as there are handlers left waiting for incoming stanzas from
--- XMPP connection.
+-- FIXME: We are needed in this function because I don't know
+-- how to make 'waitForStanza' work in async style.
+runXMPPForked :: XMPPState -> XMPP () -> IO ()
+runXMPPForked state = void . forkIO . runXMPP state
+
+-- | Run function inside the XMPP monad. After that, keep looping.
 -- Note what this function must be called only once in the main thread.
 -- Use 'runXMPP' with the same state in other threads for working with
 -- XMPP (e.g. start worker thread and send message when it's done).
 runXMPPLoop :: XMPPState -> XMPP () -> IO ()
 runXMPPLoop state m = do
-    runXMPP state m
+    runXMPPForked state m
     runXMPPLoop' state []
 
+-- FIXME: we will loop forever.
 runXMPPLoop' :: XMPPState -> [XML] -> IO ()
-runXMPPLoop' state@(XMPPState { .. }) [] = do
-    handlers <- readTVarIO stateHandlers
-    when (not $ M.null handlers) $
-        runXMPP state (getStanzas parseXML) >>= runXMPPLoop' state
+runXMPPLoop' state [] =
+    runXMPP state (getStanzas parseXML) >>= runXMPPLoop' state
 runXMPPLoop' state@(XMPPState { .. }) (stanza:stanzas) = do
     handlers <- readTVarIO stateHandlers
     case findHandler stanza handlers of
         Just (_, Catch _ stanzaHandler) ->
-            runXMPP state (stanzaHandler stanza)
+            runXMPPForked state (stanzaHandler stanza)
         Just (uniq, CatchOnce _ stanzaHandler) -> do
             atomically $ modifyTVar' stateHandlers (M.delete uniq)
-            runXMPP state (stanzaHandler stanza)
+            runXMPPForked state (stanzaHandler stanza)
         Nothing ->
             return ()
     runXMPPLoop' state stanzas
@@ -163,12 +173,12 @@ sendStanza stanza = do
 
 -- | Initialize XMPP stream. Must be run just after the connection
 -- was established.
+-- FIXME: We lose stream features stanza.
 initStream :: XMPP ()
 initStream = do
     XMPPState { .. } <- XMPP ask
     liftIO $ sendBytes stateConnection $ streamStart stateJID
-    stream <- head <$> getStanzas parseStreamStart
-    liftIO $ print stream
+    _stream <- head <$> getStanzas parseStreamStart
     return ()
 
 -- | Opening stream tag for the given XMPP server.
