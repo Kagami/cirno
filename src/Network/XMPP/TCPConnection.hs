@@ -26,14 +26,18 @@ import Network.XMPP.XMPPConnection (XMPPConnection(..))
 newtype TCPConnection = TCPConnection Socket
 
 -- | Open a TCP connection to the named server and send a stream header.
+--
 -- FIXME: Address family must be AF_INET6:
--- > If AF_INET6 is used, the IPv6Only socket option is set to 0 so
--- > that both IPv4 and IPv6 can be handled with one socket
+--
+-- /If AF_INET6 is used, the IPv6Only socket option is set to 0 so/
+-- /that both IPv4 and IPv6 can be handled with one socket./
+--
 -- But in fact that doesn't work:
--- > info <- head `fmap` getAddrInfo Nothing (Just "localhost") (Just "5222")
--- > sock <- socket AF_INET6 Stream defaultProtocol
--- > connect sock (addrAddress info)
--- *** Exception: connect: invalid argument (Invalid argument)
+--
+-- >>> info <- head `fmap` getAddrInfo Nothing (Just "localhost") (Just "5222")
+-- >>> sock <- socket AF_INET6 Stream defaultProtocol
+-- >>> connect sock (addrAddress info)
+-- >>> *** Exception: connect: invalid argument (Invalid argument)
 openTCPConnection :: JID -> Maybe Int -> IO XMPPState
 openTCPConnection jid mport = do
     sock <- socket AF_INET Stream defaultProtocol

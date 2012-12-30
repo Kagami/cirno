@@ -22,3 +22,9 @@ install-run: install run
 
 test:
 	./dist/build/cirno-tests/cirno-tests
+
+doc:
+	cabal-dev haddock
+
+doc-open: doc
+	xdg-open dist/doc/html/cirno/index.html

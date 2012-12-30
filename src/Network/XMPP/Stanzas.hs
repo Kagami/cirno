@@ -43,9 +43,11 @@ genResource = do
     return $ T.pack $ take 10 $ randomRs ('a', 'z') g
 
 -- | Generate unique ID for stanza.
+--
 -- Note that:
--- > Two Uniques may hash to the same value, although in practice
--- > this is unlikely. The Int returned makes a good hash key.
+--
+-- /Two Uniques may hash to the same value, although in practice/
+-- /this is unlikely. The Int returned makes a good hash key./
 genStanzaId :: IO Text
 genStanzaId = newUnique >>= return . showT . hashUnique
 
@@ -82,7 +84,7 @@ attributeEquals :: Text             -- ^ Attribute name
                 -> StanzaPredicate
 attributeEquals attr value = attributeMatches attr (==value)
 
--- | Return 'True' if the stanza\'s id equals to the given.
+-- | Return 'True' if the stanza's id equals to the given.
 idMatches :: Text -> StanzaPredicate
 idMatches stanzaId = attributeEquals "id" stanzaId
 
@@ -98,7 +100,7 @@ isChat = isMessage & attributeEquals "type" "chat"
 isFrom :: Text -> StanzaPredicate
 isFrom = attributeEquals "from"
 
--- |Return 'True' if the stanza\'s bare JID equals to the given.
+-- |Return 'True' if the stanza's bare JID equals to the given.
 isFromBare :: Text -> StanzaPredicate
 isFromBare jid =
     attributeMatches "from" (\jid' -> (bareJID $ readT jid') == jid)
@@ -112,10 +114,10 @@ isFromBare jid =
 --------------------------------------------------
 
 -- | Send an IQ request, return the randomly generated ID.
-sendIq :: Text       -- ^JID of recipient
-       -> Text       -- ^Type of IQ, either \"get\" or \"set\"
-       -> [XML]      -- ^Payload elements
-       -> XMPP Text  -- ^ID of sent stanza
+sendIq :: Text       -- ^ JID of recipient
+       -> Text       -- ^ Type of IQ, either \"get\" or \"set\"
+       -> [XML]      -- ^ Payload elements
+       -> XMPP Text  -- ^ ID of sent stanza
 sendIq jidTo iqType payload = do
     iqId <- liftIO genStanzaId
     sendStanza $ XML "iq"
@@ -127,10 +129,10 @@ sendIq jidTo iqType payload = do
 
 -- | Send an IQ request and wait for the response, without blocking
 -- other activity.
-sendIqWait :: Text     -- ^JID of recipient
-           -> Text     -- ^Type of IQ, either \"get\" or \"set\"
-           -> [XML]    -- ^Payload elements
-           -> XMPP XML -- ^Response stanza
+sendIqWait :: Text      -- ^ JID of recipient
+           -> Text      -- ^ Type of IQ, either \"get\" or \"set\"
+           -> [XML]     -- ^ Payload elements
+           -> XMPP XML  -- ^ Response stanza
 sendIqWait jidTo iqType payload = do
     iqId <- sendIq jidTo iqType payload
     waitForStanza $ idMatches iqId
@@ -141,8 +143,8 @@ sendInitialPresence :: XMPP ()
 sendInitialPresence = sendStanza $ XML "presence" [] []
 
 -- | Send an ordinary \"chat\" type message.
-sendMessage :: Text -- ^JID of recipient
-            -> Text -- ^Text of message
+sendMessage :: Text -- ^ JID of recipient
+            -> Text -- ^ Text of message
             -> XMPP ()
 sendMessage jidTo body =
     sendStanza $ XML "message"

@@ -1,7 +1,7 @@
 module Network.XMPP
-    ( (<>)
+    (
       -- * XML functions
-    , XML(..)
+      XML(..)
       -- * JID functions
     , module Network.XMPP.JID
       -- * The XMPP monad
@@ -15,8 +15,6 @@ module Network.XMPP
       -- * Manage connections
     , openTCPConnection
     ) where
-
-import Data.Monoid ((<>))
 
 import Network.XMPP.JID
 import Network.XMPP.XML
