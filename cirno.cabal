@@ -12,7 +12,7 @@ Synopsis:      Dumb XMPP library, the successor of the XMPP lib
 Description:   Dumb XMPP library, the successor of the XMPP lib.
 
 Build-type:    Simple
-Cabal-version: >= 1.7
+Cabal-version: >= 1.10
 
 Source-repository head
     Type:     git
@@ -23,48 +23,59 @@ Flag debug
     Default:     False
 
 Library
-    Exposed-modules: Network.XMPP
-    Other-modules:   Network.XMPP.JID
-                     Network.XMPP.XML
-                     Network.XMPP.Monad
-                     Network.XMPP.Stanzas
-                     Network.XMPP.Auth
-                     Network.XMPP.XMPPConnection
-                     Network.XMPP.TCPConnection
-                     Network.XMPP.Utils
-    GHC-options:     -Wall
-    HS-source-dirs:  src
-    Extensions:      OverloadedStrings
-                     RecordWildCards
-                     GeneralizedNewtypeDeriving
-                     ExistentialQuantification
-                     NamedFieldPuns
-                     CPP
-    Build-depends:   base       == 4.*
-                   , text       == 0.11.*
-                   , mtl        == 2.0.*
-                   , stm        == 2.4.*
-                   , containers == 0.4.*
-                   , bytestring == 0.9.*
-                   , parsec     == 3.1.*
-                   , network    == 2.4.*
-                   , random     == 1.0.*
+    Exposed-modules:    Network.XMPP
+    Other-modules:      Network.XMPP.JID
+                        Network.XMPP.XML
+                        Network.XMPP.Monad
+                        Network.XMPP.Stanzas
+                        Network.XMPP.Auth
+                        Network.XMPP.XMPPConnection
+                        Network.XMPP.TCPConnection
+                        Network.XMPP.Utils
+    GHC-options:        -Wall
+    HS-source-dirs:     src
+    Default-language:   Haskell98
+    Default-extensions: OverloadedStrings
+                        RecordWildCards
+                        GeneralizedNewtypeDeriving
+                        ExistentialQuantification
+                        NamedFieldPuns
+                        CPP
+    Build-depends:      base       == 4.*
+                      , text       == 0.11.*
+                      , mtl        == 2.0.*
+                      , stm        == 2.4.*
+                      , containers == 0.4.*
+                      , bytestring == 0.9.*
+                      , parsec     == 3.1.*
+                      , network    == 2.4.*
+                      , random     == 1.0.*
     if flag(debug)
         CPP-options: -DDEBUG
 
 Test-suite cirno-tests
-    Main-is:         Tests.hs
-    GHC-options:     -Wall
-    HS-source-dirs:  src, tests
-    Extensions:      OverloadedStrings
-                     RecordWildCards
-                     GeneralizedNewtypeDeriving
-                     ExistentialQuantification
-                     NamedFieldPuns
-                     CPP
-    Type:            exitcode-stdio-1.0
-    Build-depends:   test-framework       == 0.6.*
-                   , test-framework-hunit == 0.2.*
-                   , HUnit                == 1.2.*
+    Main-is:            Tests.hs
+    GHC-options:        -Wall
+    HS-source-dirs:     src, tests
+    Default-language:   Haskell98
+    Default-extensions: OverloadedStrings
+                        RecordWildCards
+                        GeneralizedNewtypeDeriving
+                        ExistentialQuantification
+                        NamedFieldPuns
+                        CPP
+    Type:               exitcode-stdio-1.0
+    Build-depends:      test-framework       == 0.6.*
+                      , test-framework-hunit == 0.2.*
+                      , HUnit                == 1.2.*
+    Build-depends:      base       == 4.*
+                      , text       == 0.11.*
+                      , mtl        == 2.0.*
+                      , stm        == 2.4.*
+                      , containers == 0.4.*
+                      , bytestring == 0.9.*
+                      , parsec     == 3.1.*
+                      , network    == 2.4.*
+                      , random     == 1.0.*
     if flag(debug)
         CPP-options: -DDEBUG
