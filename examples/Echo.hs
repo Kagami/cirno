@@ -6,14 +6,14 @@ import Network (withSocketsDo)
 import System.Environment (getProgName, getArgs)
 import qualified Data.Text as T
 
-import Network.XMPP (XML(..), openTCPConnection, runXMPPLoop, initStream,
+import Network.XMPP (XML(..), openTCPConnection, runXMPPLoop, initStream, readT,
                      legacyAuth, sendInitialPresence, sendMessage, addHandler,
                      (&), isChat, isFromBare, getBody)
 
 echoBot :: [Text] -> IO ()
 echoBot [jid, password, jidTo] = withSocketsDo $ do
-    state <- openTCPConnection jid Nothing
-    runXMPPLoop state $ do
+    session <- openTCPConnection (readT jid) Nothing
+    runXMPPLoop session $ do
         initStream
         legacyAuth password
         sendInitialPresence

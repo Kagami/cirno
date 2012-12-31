@@ -4,7 +4,6 @@ module Network.XMPP.TCPConnection
     ) where
 
 import Control.Applicative ((<$>))
-import Data.Text (Text)
 import Network.Socket (Socket, Family(AF_INET), SocketType(Stream),
                        defaultProtocol, getAddrInfo, addrAddress,
                        socket, connect, close)
@@ -20,7 +19,6 @@ import qualified Data.ByteString.Char8 as S
 import Network.XMPP.JID (JID(..))
 import Network.XMPP.Monad (XMPPState, initXMPP)
 import Network.XMPP.XMPPConnection (XMPPConnection(..))
-import Network.XMPP.Utils (readT)
 
 -- FIXME: check for errors!
 
@@ -40,11 +38,10 @@ newtype TCPConnection = TCPConnection Socket
 -- >>> sock <- socket AF_INET6 Stream defaultProtocol
 -- >>> connect sock (addrAddress info)
 -- >>> *** Exception: connect: invalid argument (Invalid argument)
-openTCPConnection :: Text -> Maybe Int -> IO XMPPState
-openTCPConnection jidT mport = do
+openTCPConnection :: JID -> Maybe Int -> IO XMPPState
+openTCPConnection jid@(JID { .. }) mport = do
     sock <- socket AF_INET Stream defaultProtocol
-    let jid = readT jidT
-    let host = T.unpack $ jidServer jid
+    let host = T.unpack domainpart
     let port = maybe "5222" show mport
     addrInfo <- head <$> getAddrInfo Nothing (Just host) (Just port)
     connect sock (addrAddress addrInfo)

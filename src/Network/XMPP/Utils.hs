@@ -1,6 +1,6 @@
 module Network.XMPP.Utils
     ( ReadT(..)
-    , showT
+    , ShowT(..)
     ) where
 
 import Data.Text (Text)
@@ -12,6 +12,9 @@ class ReadT a where
     readT :: Text -> a
 
 -- | Convert value to 'Text'.
--- Like 'show' but convert to 'Text' instead of 'String'.
-showT :: Show a => a -> Text
-showT = T.pack . show
+-- Like 'Show' but convert to 'Text' instead of 'String'.
+class ShowT a where
+    showT :: a -> Text
+
+instance ShowT Int where
+    showT = T.pack . show

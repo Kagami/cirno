@@ -3,8 +3,8 @@ module Network.XMPP.Auth
     ) where
 
 import Control.Monad.Trans (liftIO)
+import Data.Maybe (fromJust)
 import Data.Text (Text)
-import qualified Data.Text as T
 
 import Network.XMPP.JID (JID(..))
 import Network.XMPP.XML (XML(..))
@@ -16,14 +16,12 @@ import Network.XMPP.Stanzas (genResource, sendIqWait)
 legacyAuth :: Text     -- ^ Password
            -> XMPP ()
 legacyAuth password = do
-    jid <- getJID
-    resource <- if T.null $ jidResource jid
-                    then liftIO $ genResource
-                    else return $ jidResource jid
-    _response <- sendIqWait (jidServer jid) "set"
+    JID { .. } <- getJID
+    resource <- maybe (liftIO genResource) return resourcepart
+    _response <- sendIqWait domainpart "set"
         [XML "query"
              [("xmlns", "jabber:iq:auth")]
-             [ XML "username" [] [CData $ jidUsername jid]
+             [ XML "username" [] [CData $ fromJust localpart]
              , XML "password" [] [CData password]
              , XML "resource" [] [CData resource]
              ]]

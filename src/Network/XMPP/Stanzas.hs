@@ -103,7 +103,7 @@ isFrom = attributeEquals "from"
 -- |Return 'True' if the stanza's bare JID equals to the given.
 isFromBare :: Text -> StanzaPredicate
 isFromBare jid =
-    attributeMatches "from" (\jid' -> (bareJID $ readT jid') == jid)
+    attributeMatches "from" (\jid' -> (showT $ bareJID $ readT jid') == jid)
 
 --------------------------------------------------
 -- Constructors for common stanzas.

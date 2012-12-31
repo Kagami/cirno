@@ -32,7 +32,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.ByteString as S
 
-import Network.XMPP.JID (JID(jidServer))
+import Network.XMPP.JID (JID(..))
 import Network.XMPP.XML (XML(..), XMLParser, xml2bytes, tag2bytes,
                          parseXML, parseStreamStart)
 import Network.XMPP.XMPPConnection (XMPPConnection(getBytes, sendBytes))
@@ -183,11 +183,11 @@ initStream = do
 
 -- | Opening stream tag for the given XMPP server.
 streamStart :: JID -> ByteString
-streamStart jid =
+streamStart JID { .. } =
     "<?xml version='1.0'?>" <>
     (tag2bytes $
         XML "stream:stream"
-            [ ("to", jidServer jid)
+            [ ("to", domainpart)
             , ("xmlns", "jabber:client")
             , ("xmlns:stream","http://etherx.jabber.org/streams")
             ]
