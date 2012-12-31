@@ -60,7 +60,7 @@ data XMPPState = forall c. XMPPConnection c => XMPPState
 newtype XMPP a = XMPP { unXMPP :: ReaderT XMPPState IO a }
     deriving (Functor, Monad, MonadIO)
 
--- | Initialize monad state and XMPP stream.
+-- | Initialize monad state.
 initXMPP :: XMPPConnection c => c -> JID -> IO XMPPState
 initXMPP c jid = do
     bufvar <- newIORef T.empty

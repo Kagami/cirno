@@ -1,4 +1,4 @@
-module Network.XMPP.Auth
+module Network.XMPP.LegacyAuth
     ( legacyAuth
     ) where
 
@@ -12,6 +12,7 @@ import Network.XMPP.Monad (XMPP, getJID)
 import Network.XMPP.Stanzas (genResource, sendIqWait)
 
 -- | Implement XEP-0078: Non-SASL Authentication
+--
 -- FIXME: Check for errors.
 legacyAuth :: Text     -- ^ Password
            -> XMPP ()

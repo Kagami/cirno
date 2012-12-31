@@ -28,7 +28,7 @@ Library
                         Network.XMPP.XML
                         Network.XMPP.Monad
                         Network.XMPP.Stanzas
-                        Network.XMPP.Auth
+                        Network.XMPP.LegacyAuth
                         Network.XMPP.XMPPConnection
                         Network.XMPP.TCPConnection
                         Network.XMPP.Utils

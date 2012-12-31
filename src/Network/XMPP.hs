@@ -9,7 +9,7 @@ module Network.XMPP
       -- * Stanza-related functional
     , module Network.XMPP.Stanzas
       -- * Authentication
-    , module Network.XMPP.Auth
+    , module Network.XMPP.LegacyAuth
       -- * Helpers
     , module Network.XMPP.Utils
       -- * Manage connections
@@ -20,6 +20,6 @@ import Network.XMPP.JID
 import Network.XMPP.XML
 import Network.XMPP.Monad hiding (initXMPP)
 import Network.XMPP.Stanzas
-import Network.XMPP.Auth
+import Network.XMPP.LegacyAuth
 import Network.XMPP.Utils
 import Network.XMPP.TCPConnection (openTCPConnection)

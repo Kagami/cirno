@@ -57,6 +57,10 @@ instance ShowT JID where
         domainpart <>
         maybe "" (T.cons '/') resourcepart
 
+-- | Show full JID.
+instance Show JID where
+    show = T.unpack . showT
+
 -- | Drop resourcepart of the given JID.
 bareJID :: JID -> JID
 bareJID JID { .. } = JID localpart domainpart Nothing
