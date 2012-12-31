@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Data.Maybe (fromJust)
+import Data.Text (Text)
 import Network (withSocketsDo)
 import System.Environment (getProgName, getArgs)
 import qualified Data.Text as T
@@ -9,11 +10,8 @@ import Network.XMPP (XML(..), openTCPConnection, runXMPPLoop, initStream,
                      legacyAuth, sendInitialPresence, sendMessage, addHandler,
                      (&), isChat, isFromBare, getBody)
 
-echoBot :: [String] -> IO ()
-echoBot [jidS, passwordS, jidToS] = withSocketsDo $ do
-    let jid = read jidS
-    let password = T.pack passwordS
-    let jidTo = T.pack jidToS
+echoBot :: [Text] -> IO ()
+echoBot [jid, password, jidTo] = withSocketsDo $ do
     state <- openTCPConnection jid Nothing
     runXMPPLoop state $ do
         initStream
@@ -28,6 +26,6 @@ main = do
     progName <- getProgName
     args <- getArgs
     case length args of
-        3 -> echoBot args
+        3 -> echoBot $ map T.pack args
         _ -> putStrLn $ "Usage: `" ++ progName ++
                         " bot@jabber.org bot_password you@jabber.org'"
